@@ -16,32 +16,6 @@ repository key when a scan originated from checkout.
 | `level-ci-secondary-repos/checkout` | Secondary repository and PR comment target |
 | `level-ci-secondary-repos/healthcheck` | Unconnected test runner and scan sender |
 
-## Local setup
-
-1. Make checkout available under the desktop fixture, matching the assembled
-   CI artifact:
-
-   ```sh
-   ln -s ../checkout ../desktop/checkout
-   ```
-
-2. Export a valid `CLOUDSMITH_TOKEN`, then install the test dependencies:
-
-   ```sh
-   npm ci
-   npx playwright install chromium
-   ```
-
-3. Generate fresh accessibility reports:
-
-   ```sh
-   npm run test:playwright
-   ```
-
-The reports are written to `./level-ci-reports`.
-Remove `../desktop/checkout` when the local symlink is no longer
-needed.
-
 ## GitHub Actions
 
 This repository owns the complete test and scan job. `level-ci-secondary-repos/desktop`
