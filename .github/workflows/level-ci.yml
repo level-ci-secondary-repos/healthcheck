@@ -53,15 +53,7 @@ jobs:
       SOURCE_COMMIT: ${{ github.event.client_payload.commit_hash || inputs.commit_hash }}
       SOURCE_PULL_REQUEST: ${{ github.event.client_payload.pull_request || inputs.pull_request }}
       SECONDARY_REPOSITORY_KEY: ${{ github.event.client_payload.secondary_repository_key || inputs.secondary_repository_key }}
-      LEVEL_CI_PROJECT: ${{ secrets.LEVEL_CI_PROJECT }}
     steps:
-      - name: Validate healthcheck configuration
-        run: |
-          if [[ -z "$LEVEL_CI_PROJECT" ]]; then
-            echo "::error::Set the LEVEL_CI_PROJECT repository secret."
-            exit 1
-          fi
-
       - name: Validate scan request
         run: |
           test "$APPLICATION_ARTIFACT_REPOSITORY" = "level-ci-secondary-repos/desktop"
@@ -109,7 +101,6 @@ jobs:
         with:
           token: ${{ secrets.LEVEL_CI_TOKEN }}
           organization: ${{ inputs.organization || vars.LEVEL_CI_ORGANIZATION }}
-          project: ${{ env.LEVEL_CI_PROJECT }}
           branch: ${{ env.SOURCE_BRANCH }}
           commit_hash: ${{ env.SOURCE_COMMIT }}
           secondary_repository_key: ${{ env.SECONDARY_REPOSITORY_KEY }}

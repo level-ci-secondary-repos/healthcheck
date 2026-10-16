@@ -31,9 +31,7 @@ Configure these secrets and variables on healthcheck:
 - secret `LEVEL_CI_TOKEN`
 - secret `CLOUDSMITH_TOKEN`
 - secret `DESKTOP_ARTIFACT_READ_TOKEN` with Actions read access to desktop
-- secret `LEVEL_CI_PROJECT`
 - variable `LEVEL_CI_ORGANIZATION`
-- variable `LEVEL_CI_SERVER`
 
 On desktop, configure `CHECKOUT_REPOSITORY_READ_TOKEN` with read access to
 checkout and `HEALTHCHECK_DISPATCH_TOKEN` with write access to healthcheck's
