@@ -1,0 +1,118 @@
+name: Level CI
+
+on:
+  repository_dispatch:
+    types: [level-ci-scan]
+  workflow_dispatch:
+    inputs:
+      artifact_repository:
+        description: GitHub repository that produced the application artifact
+        required: true
+        default: level-ci-secondary-repos/desktop
+      artifact_run_id:
+        description: Workflow run ID that produced the application artifact
+        required: true
+      artifact_name:
+        description: Name of the application artifact
+        required: true
+      branch:
+        description: Git branch to attribute the scan to
+        required: true
+        default: main
+      commit_hash:
+        description: Git commit to attribute the scan to
+        required: true
+      pull_request:
+        description: Pull request number to attribute the scan to
+        required: false
+      secondary_repository_key:
+        description: Leave empty for the primary baseline
+        required: false
+      organization:
+        description: Level CI organization slug. Falls back to LEVEL_CI_ORGANIZATION.
+        required: false
+      server:
+        description: Level CI server URL. Falls back to LEVEL_CI_SERVER.
+        required: false
+
+concurrency:
+  group: level-ci-${{ github.event.client_payload.secondary_repository_key || 'primary' }}-${{ github.event.client_payload.branch || inputs.branch || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      APPLICATION_ARTIFACT_REPOSITORY: ${{ github.event.client_payload.artifact_repository || inputs.artifact_repository }}
+      APPLICATION_ARTIFACT_RUN_ID: ${{ github.event.client_payload.artifact_run_id || inputs.artifact_run_id }}
+      APPLICATION_ARTIFACT_NAME: ${{ github.event.client_payload.artifact_name || inputs.artifact_name }}
+      SOURCE_BRANCH: ${{ github.event.client_payload.branch || inputs.branch }}
+      SOURCE_COMMIT: ${{ github.event.client_payload.commit_hash || inputs.commit_hash }}
+      SOURCE_PULL_REQUEST: ${{ github.event.client_payload.pull_request || inputs.pull_request }}
+      SECONDARY_REPOSITORY_KEY: ${{ github.event.client_payload.secondary_repository_key || inputs.secondary_repository_key }}
+      LEVEL_CI_PROJECT: ${{ secrets.LEVEL_CI_PROJECT }}
+    steps:
+      - name: Validate healthcheck configuration
+        run: |
+          if [[ -z "$LEVEL_CI_PROJECT" ]]; then
+            echo "::error::Set the LEVEL_CI_PROJECT repository secret."
+            exit 1
+          fi
+
+      - name: Validate scan request
+        run: |
+          test "$APPLICATION_ARTIFACT_REPOSITORY" = "level-ci-secondary-repos/desktop"
+          test -n "$APPLICATION_ARTIFACT_RUN_ID"
+          test -n "$APPLICATION_ARTIFACT_NAME"
+          test -n "$SOURCE_BRANCH"
+          test -n "$SOURCE_COMMIT"
+
+      - name: Check out healthcheck
+        uses: actions/checkout@v4
+
+      - name: Download assembled application
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.APPLICATION_ARTIFACT_NAME }}
+          path: app
+          repository: ${{ env.APPLICATION_ARTIFACT_REPOSITORY }}
+          run-id: ${{ env.APPLICATION_ARTIFACT_RUN_ID }}
+          github-token: ${{ secrets.DESKTOP_ARTIFACT_READ_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install application dependencies
+        run: npm ci
+        working-directory: app
+
+      - name: Install healthcheck dependencies
+        run: npm ci
+        env:
+          CLOUDSMITH_TOKEN: ${{ secrets.CLOUDSMITH_TOKEN }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate Level CI reports
+        run: npm run test:playwright
+        env:
+          APPLICATION_PATH: app
+
+      - name: Upload repository-aware scan
+        uses: levelaccess/level-ci@dev
+        with:
+          token: ${{ secrets.LEVEL_CI_TOKEN }}
+          organization: ${{ inputs.organization || vars.LEVEL_CI_ORGANIZATION }}
+          project: ${{ env.LEVEL_CI_PROJECT }}
+          branch: ${{ env.SOURCE_BRANCH }}
+          commit_hash: ${{ env.SOURCE_COMMIT }}
+          secondary_repository_key: ${{ env.SECONDARY_REPOSITORY_KEY }}
+          pull_request: ${{ env.SOURCE_PULL_REQUEST }}
+          report_paths: ./level-ci-reports
+          server: ${{ inputs.server || vars.LEVEL_CI_SERVER }}

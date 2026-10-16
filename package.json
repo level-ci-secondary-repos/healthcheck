@@ -1,0 +1,21 @@
+{
+  "name": "healthcheck",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scan": "node --env-file-if-exists=.env.local scripts/scan.mjs",
+    "test": "npx playwright test",
+    "test:playwright": "npx playwright test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@level-ci/a11y-playwright": "^0.2.7",
+    "@level-ci/cli": "^0.2.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "24.5.2",
+    "typescript": "5.9.2"
+  }
+}
